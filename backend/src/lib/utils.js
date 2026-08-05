@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { ENV } from "./env.js";
 
@@ -20,6 +21,13 @@ export const generateToken = (userId, res) => {
 
   return token;
 };
+
+export const createRandomToken = () => crypto.randomBytes(32).toString("hex");
+
+export const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+export const createSixDigitCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 // http://localhost
 // https://dsmakmk.com

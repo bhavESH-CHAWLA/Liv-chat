@@ -6,9 +6,27 @@ import User from "../models/User.js";
 export const getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const search = req.query.search?.trim();
 
-    res.status(200).json(filteredUsers);
+    const filter = { _id: { $ne: loggedInUserId } };
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    let users = await User.find(filter).select("-password");
+
+    if (search && users.length === 0) {
+      users = await User.aggregate([
+        { $match: { _id: { $ne: loggedInUserId } } },
+        { $sample: { size: 8 } },
+        { $project: { password: 0, emailVerificationToken: 0, emailVerificationExpires: 0, passwordResetToken: 0, passwordResetExpires: 0, twoFactorCode: 0, twoFactorCodeExpires: 0 } },
+      ]);
+    }
+
+    res.status(200).json(users);
   } catch (error) {
     console.log("Error in getAllContacts:", error);
     res.status(500).json({ message: "Server error" });

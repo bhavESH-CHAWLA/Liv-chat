@@ -3,7 +3,12 @@ import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : "/";
+const resolveBaseUrl = () => {
+  const base = axiosInstance?.defaults?.baseURL || (import.meta.env.MODE === "development" ? "http://localhost:3001/api" : "/api");
+  return base.replace(/\/api\/?$/i, "");
+};
+
+const BASE_URL = resolveBaseUrl();
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -35,7 +40,14 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully!");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      const message = error?.response?.data?.message || error?.message || "Unable to create account";
+      // Improve guidance for network errors
+      if (message === "Network Error") {
+        toast.error("Network Error: backend unreachable. Is the server running on http://localhost:3000?");
+      } else {
+        toast.error(message);
+      }
+      console.log("Signup error:", error);
     } finally {
       set({ isSigningUp: false });
     }
@@ -51,7 +63,8 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error?.response?.data?.message || error?.message || "Unable to login");
+      console.log("Login error:", error);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -76,7 +89,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Profile updated successfully");
     } catch (error) {
       console.log("Error in update profile:", error);
-      toast.error(error.response.data.message);
+      toast.error(error?.response?.data?.message || error?.message || "Unable to update profile");
     }
   },
 

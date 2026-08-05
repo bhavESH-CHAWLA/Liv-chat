@@ -9,6 +9,7 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   activeTab: "chats",
   selectedUser: null,
+  searchQuery: "",
   isUsersLoading: false,
   isMessagesLoading: false,
   isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
@@ -20,14 +21,16 @@ export const useChatStore = create((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSearchQuery: (searchQuery) => set({ searchQuery }),
 
-  getAllContacts: async () => {
+  getAllContacts: async (search = "") => {
     set({ isUsersLoading: true });
     try {
-      const res = await axiosInstance.get("/messages/contacts");
+      const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+      const res = await axiosInstance.get(`/messages/contacts${query}`);
       set({ allContacts: res.data });
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       set({ isUsersLoading: false });
     }
@@ -69,17 +72,17 @@ export const useChatStore = create((set, get) => ({
       text: messageData.text,
       image: messageData.image,
       createdAt: new Date().toISOString(),
-      isOptimistic: true, // flag to identify optimistic messages (optional)
+      isOptimistic: true,
     };
-    // immidetaly update the ui by adding the message
-    set({ messages: [...messages, optimisticMessage] });
+
+    const optimisticMessages = [...messages, optimisticMessage];
+    set({ messages: optimisticMessages });
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: messages.concat(res.data) });
+      set({ messages: optimisticMessages.map((msg) => (msg._id === tempId ? res.data : msg)) });
     } catch (error) {
-      // remove optimistic message on failure
-      set({ messages: messages });
+      set({ messages });
       toast.error(error.response?.data?.message || "Something went wrong");
     }
   },
