@@ -53,7 +53,7 @@ export const signup = async (req, res) => {
     const savedUser = await newUser.save();
     await createAndSendEmailVerification(savedUser);
 
-    generateToken(savedUser._id, res);
+    generateToken(savedUser, res);
 
     res.status(201).json({
       _id: savedUser._id,
@@ -113,7 +113,7 @@ export const login = async (req, res) => {
       await user.save();
     }
 
-    generateToken(user._id, res);
+    generateToken(user, res);
 
     res.status(200).json({
       _id: user._id,
@@ -149,7 +149,7 @@ export const verifyLoginTwoFactor = async (req, res) => {
     user.twoFactorCodeExpires = undefined;
     await user.save();
 
-    generateToken(user._id, res);
+    generateToken(user, res);
 
     res.status(200).json({
       _id: user._id,
@@ -266,9 +266,10 @@ export const resetPassword = async (req, res) => {
     user.password = await bcrypt.hash(password, salt);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    user.tokenVersion += 1;
     await user.save();
 
-    generateToken(user._id, res);
+    generateToken(user, res);
 
     res.status(200).json({
       message: "Password reset successful",
@@ -311,6 +312,7 @@ export const changePassword = async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
+    user.tokenVersion += 1;
     await user.save();
 
     res.status(200).json({ message: "Password changed successfully" });
@@ -403,6 +405,10 @@ export const updateProfile = async (req, res) => {
 
     if (fullName) user.fullName = fullName;
     if (email && email !== user.email) {
+      const emailTaken = await User.findOne({ email });
+      if (emailTaken) {
+        return res.status(400).json({ message: "Email is already in use" });
+      }
       user.email = email;
       user.isEmailVerified = false;
       await createAndSendEmailVerification(user);

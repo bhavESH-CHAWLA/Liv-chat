@@ -20,6 +20,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    contacts: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ],
+    incomingContactRequests: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ],
+    outgoingContactRequests: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ],
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -34,9 +43,17 @@ const userSchema = new mongoose.Schema(
     },
     twoFactorCode: String,
     twoFactorCodeExpires: Date,
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true } // createdAt & updatedAt
 );
+
+userSchema.index({ emailVerificationToken: 1 }, { sparse: true });
+userSchema.index({ passwordResetToken: 1 }, { sparse: true });
+userSchema.index({ twoFactorCode: 1 }, { sparse: true });
 
 const User = mongoose.model("User", userSchema);
 

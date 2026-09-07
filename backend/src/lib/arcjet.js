@@ -6,17 +6,18 @@ if (ENV.ARCJET_KEY) {
   try {
     const arcjet = (await import("@arcjet/node")).default;
     const { shield, detectBot, slidingWindow } = await import("@arcjet/node");
+    const mode = ENV.NODE_ENV === "production" ? "ENFORCE" : "DRY_RUN";
 
     aj = arcjet({
       key: ENV.ARCJET_KEY,
       rules: [
-        shield({ mode: "DRY_RUN" }),
+        shield({ mode }),
         detectBot({
-          mode: "DRY_RUN",
+          mode,
           allow: ["CATEGORY:SEARCH_ENGINE"],
         }),
         slidingWindow({
-          mode: "DRY_RUN",
+          mode,
           max: 100,
           interval: 60,
         }),

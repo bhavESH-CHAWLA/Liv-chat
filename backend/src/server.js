@@ -5,7 +5,7 @@ import cors from "cors";
 
 import authRoutes from "./routes/auth.routes.js";
 import messageRoutes from "./routes/messages.routes.js";
-import { connectDB } from "./lib/db.js";
+import { connectDB, isDbConnected } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 import { app, server } from "./lib/socket.js";
 import User from "./models/User.js";
@@ -13,7 +13,7 @@ import bcrypt from "bcryptjs";
 
 const __dirname = path.resolve();
 
-const PORT = process.env.PORT || ENV.PORT || 3001;
+const PORT = process.env.PORT || ENV.PORT || 3000;
 
 app.use(express.json({ limit: "5mb" })); // req.body
 // Allow CORS for the configured client URL in production, but be permissive for local development
@@ -49,24 +49,39 @@ if (ENV.NODE_ENV === "production") {
 }
 
 const seedTestAccounts = async () => {
-  if (ENV.NODE_ENV === "production") return;
+  if (ENV.NODE_ENV === "production" || !isDbConnected()) return;
 
-  const existing = await User.findOne({ email: "tester1@example.com" });
-  if (existing) return;
+  try {
+    const existing = await User.findOne({ email: "tester1@example.com" }).maxTimeMS(3000);
+    if (existing) return;
 
-  const password = await bcrypt.hash("password123", 10);
-  const users = [
-    { fullName: "Tester One", email: "tester1@example.com", password },
-    { fullName: "Tester Two", email: "tester2@example.com", password },
-    { fullName: "Alice Demo", email: "alice@example.com", password },
-    { fullName: "Bob Demo", email: "bob@example.com", password },
-  ];
-  await User.insertMany(users);
-  console.log("Seeded test accounts for development.");
+    const password = await bcrypt.hash("password123", 10);
+    const users = [
+      { fullName: "Tester One", email: "tester1@example.com", password },
+      { fullName: "Tester Two", email: "tester2@example.com", password },
+      { fullName: "Alice Demo", email: "alice@example.com", password },
+      { fullName: "Bob Demo", email: "bob@example.com", password },
+    ];
+    await User.insertMany(users);
+    console.log("Seeded test accounts for development.");
+  } catch (error) {
+    console.warn("Could not seed test accounts:", error.message);
+  }
 };
 
-server.listen(PORT, async () => {
-  console.log("Server running on port: " + PORT);
-  await connectDB();
-  await seedTestAccounts();
-});
+const startServer = async () => {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+
+  try {
+    await connectDB();
+    await seedTestAccounts();
+  } catch (err) {
+    console.error("Non-fatal startup error:", err.message);
+  }
+};
+
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+});
