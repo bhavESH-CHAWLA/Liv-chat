@@ -1,17 +1,14 @@
-import { ENV } from "./env.js";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
-let resendClient = null;
+dotenv.config();
 
-try {
-  const { Resend } = await import("resend");
-  resendClient = ENV.RESEND_API_KEY ? new Resend(ENV.RESEND_API_KEY) : null;
-} catch (error) {
-  console.warn("Resend unavailable, using fallback email transport:", error.message);
-}
-
-export const sender = {
-  email: ENV.EMAIL_FROM,
-  name: ENV.EMAIL_FROM_NAME,
-};
-
-export { resendClient };
+export const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: false, // false for port 587 (TLS)
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});

@@ -36,9 +36,7 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
-      toast.success("Account created successfully! Welcome to Liv-chat.");
-      get().connectSocket();
+      toast.success(res.data.message || "Account created. Please verify your email before logging in.");
     } catch (error) {
       const message = error?.response?.data?.message || error?.message || "Unable to create account";
       if (message === "Network Error") {
@@ -118,4 +116,4 @@ export const useAuthStore = create((set, get) => ({
     }
     set({ socket: null, onlineUsers: [] });
   },
-}));
+}));

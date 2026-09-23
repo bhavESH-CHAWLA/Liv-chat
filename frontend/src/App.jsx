@@ -3,6 +3,7 @@ import ChatPage from "./pages/ChatPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import InvitePage from "./pages/InvitePage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "./components/PageLoader";
@@ -28,6 +29,7 @@ function App() {
           <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" replace />} />
           <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" replace />} />
           <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" replace />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/invite/:id" element={authUser ? <InvitePage /> : <Navigate to="/login" replace />} />
         </Routes>
       </div>
@@ -62,4 +64,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;

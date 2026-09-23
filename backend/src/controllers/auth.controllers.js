@@ -53,14 +53,9 @@ export const signup = async (req, res) => {
     const savedUser = await newUser.save();
     await createAndSendEmailVerification(savedUser);
 
-    generateToken(savedUser, res);
-
     res.status(201).json({
-      _id: savedUser._id,
-      fullName: savedUser.fullName,
-      email: savedUser.email,
-      profilePic: savedUser.profilePic,
-      isEmailVerified: savedUser.isEmailVerified,
+      message: "Account created. Please verify your email before logging in.",
+      isEmailVerified: false,
     });
 
     try {
@@ -87,6 +82,14 @@ export const login = async (req, res) => {
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid credentials" });
+
+    // Enforce email verification before letting the user log in
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email address before logging in.",
+        isEmailVerified: false,
+      });
+    }
 
     if (user.twoFactorEnabled) {
       if (!twoFactorCode) {

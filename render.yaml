@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: liv-chat-backend
+    runtime: node
+    repo: .
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+  - type: static
+    name: liv-chat-frontend
+    repo: .
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://liv-chat-backend.onrender.com/api

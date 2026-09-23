@@ -1,4 +1,4 @@
-import { resendClient, sender } from "../lib/resend.js";
+import { transporter } from "../lib/resend.js";
 import {
   createWelcomeEmailTemplate,
   createEmailVerificationTemplate,
@@ -7,7 +7,7 @@ import {
 } from "../emails/emailTemplates.js";
 
 const sendEmail = async (email, subject, html) => {
-  if (!resendClient) {
+  if (!transporter) {
     console.log("No email provider configured. Falling back to local email queue.");
     return {
       provider: "fallback",
@@ -17,30 +17,21 @@ const sendEmail = async (email, subject, html) => {
   }
 
   try {
-    const { data, error } = await resendClient.emails.send({
-      from: `${sender.name} <${sender.email}>`,
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
       to: email,
       subject,
       html,
     });
 
-    if (error) {
-      console.warn("Resend rejected the email, using fallback queue instead.", error);
-      return {
-        provider: "fallback",
-        status: "queued",
-        message: "Email queued locally because the email provider rejected the request.",
-      };
-    }
-
-    console.log(`${subject} sent successfully`, data);
+    console.log(`${subject} sent successfully`, info.messageId);
     return {
-      provider: "resend",
+      provider: "smtp",
       status: "sent",
       message: `${subject} sent successfully.`,
     };
   } catch (error) {
-    console.warn("Email provider failed, using fallback queue instead.", error);
+    console.warn("SMTP provider failed, using fallback queue instead.", error);
     return {
       provider: "fallback",
       status: "queued",
