@@ -12,6 +12,12 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: CLIENT_URL
+        value: https://liv-chat.vercel.app
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
 
   - type: static
     name: liv-chat-frontend
@@ -25,4 +31,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://liv-chat-backend.onrender.com/api
+        value: https://liv-chat-1.onrender.com/api
