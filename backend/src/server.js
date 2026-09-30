@@ -15,25 +15,38 @@ const __dirname = path.resolve();
 
 const PORT = process.env.PORT || ENV.PORT || 3000;
 
-app.use(express.json({ limit: "5mb" })); // req.body
-// Allow CORS for the configured client URL in production, but be permissive for local development
-if (ENV.NODE_ENV === "production") {
-  app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
-} else {
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // allow requests with no origin (e.g. mobile apps, curl)
-        if (!origin) return callback(null, true);
-        // allow localhost dev ports
-        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
-        // fallback to configured client URL
-        return callback(null, origin === ENV.CLIENT_URL);
-      },
-      credentials: true,
-    })
-  );
-}
+const allowedOrigins = new Set([
+  ENV.CLIENT_URL,
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://localhost:3000",
+  "http://localhost:3001",
+]);
+
+app.use(express.json({ limit: "5mb" }));
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const isAllowedLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      const isAllowedVercelPreview = /^https:\/\/.*\.vercel\.app$/.test(origin);
+
+      if (allowedOrigins.has(origin) || isAllowedLocalhost || isAllowedVercelPreview) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
@@ -84,4 +97,4 @@ const startServer = async () => {
 
 startServer().catch((error) => {
   console.error("Failed to start server:", error);
-});
+});

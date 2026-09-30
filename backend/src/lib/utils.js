@@ -16,11 +16,13 @@ export const generateToken = (user, res) => {
     }
   );
 
+  const isProduction = ENV.NODE_ENV === "production";
+
   res.cookie("jwt", token, {
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: ENV.NODE_ENV === "production" ? "none" : "lax",
-    secure: ENV.NODE_ENV === "production",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
     path: "/",
   });
 
