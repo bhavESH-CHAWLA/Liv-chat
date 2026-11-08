@@ -1,4 +1,4 @@
-import { transporter } from "../lib/resend.js";
+import { ENV } from "../lib/env.js";
 import {
   createWelcomeEmailTemplate,
   createEmailVerificationTemplate,
@@ -13,40 +13,68 @@ export class EmailDeliveryError extends Error {
   }
 }
 
-export const createEmailSender = ({ mailTransport, from }) =>
+const parseSender = (from) => {
+  const match = from?.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
+  return match
+    ? { name: match[1].replace(/^["']|["']$/g, ""), email: match[2].trim() }
+    : { email: from?.trim() };
+};
+
+export const createEmailSender = ({
+  apiKey,
+  from,
+  fetchImpl = fetch,
+}) =>
   async (email, subject, html) => {
-    if (!mailTransport || !from) {
-      throw new EmailDeliveryError("SMTP is not fully configured");
+    const sender = parseSender(from);
+    if (!apiKey || !sender.email) {
+      throw new EmailDeliveryError("Email delivery is not fully configured");
     }
 
     try {
-      const info = await mailTransport.sendMail({
-        from,
-        to: email,
-        subject,
-        html,
+      const response = await fetchImpl("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender,
+          to: [{ email }],
+          subject,
+          htmlContent: html,
+        }),
+        signal: AbortSignal.timeout(15_000),
       });
 
-      console.log(`${subject} sent successfully`, info.messageId);
+      if (!response.ok) {
+        throw Object.assign(new Error(`Brevo API returned HTTP ${response.status}`), {
+          status: response.status,
+        });
+      }
+
+      const result = await response.json();
+      console.log(`${subject} sent successfully`, result.messageId);
       return {
-        provider: "smtp",
+        provider: "brevo-api",
         status: "sent",
         message: `${subject} sent successfully.`,
       };
     } catch (error) {
-      console.error("SMTP email delivery failed:", {
+      console.error("Brevo API email delivery failed:", {
         subject,
         code: error.code,
-        responseCode: error.responseCode,
+        responseCode: error.status,
         message: error.message,
       });
-      throw new EmailDeliveryError("SMTP email delivery failed", { cause: error });
+      throw new EmailDeliveryError("Email delivery failed", { cause: error });
     }
   };
 
 const sendEmail = createEmailSender({
-  mailTransport: transporter,
-  from: process.env.EMAIL_FROM,
+  apiKey: ENV.BREVO_API_KEY,
+  from: ENV.EMAIL_FROM,
 });
 
 export const sendWelcomeEmail = async (email, name, clientURL) =>

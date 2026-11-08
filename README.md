@@ -88,7 +88,7 @@ The UX is optimized for responsiveness and includes a clean dashboard with chat 
 - Email verification email
 - Reset password email
 - 2FA code email delivery
-- Configurable SMTP using Brevo/Resend-style email providers
+- Transactional email delivery through the Brevo API
 
 ### UI Features
 - Dark modern chat interface
@@ -177,7 +177,7 @@ Before running the app, make sure you have:
 - Node.js 20 or newer
 - npm or pnpm
 - MongoDB instance running or MongoDB Atlas connection string
-- SMTP provider credentials for email sending
+- Brevo API key and verified sender address for transactional email
 - Cloudinary account for image upload storage
 - Optional: Render or another deployment platform
 
@@ -193,10 +193,7 @@ JWT_SECRET=your_secret_key
 
 CLIENT_URL=http://localhost:5173
 
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your_smtp_user
-SMTP_PASS=your_smtp_password
+BREVO_API_KEY=your_brevo_api_key
 EMAIL_FROM="LivChat <you@example.com>"
 
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -277,6 +274,8 @@ Recommended deployment flow:
 NODE_ENV=production
 CLIENT_URL=https://your-frontend-domain.com
 VITE_API_URL=https://your-backend-domain.onrender.com/api
+BREVO_API_KEY=your_brevo_api_key
+EMAIL_FROM="LivChat <verified-sender@your-domain.com>"
 ```
 
 ## Security & Rate Limiting
@@ -360,9 +359,9 @@ The auth and message routes are wrapped with middleware to enforce rules before 
 - Verify the database user has access permissions
 
 ### Email not sending
-- Check SMTP credentials and host values
-- Confirm `EMAIL_FROM` is valid
-- Ensure the SMTP provider allows your application to send mail
+- Confirm `BREVO_API_KEY` is a Brevo API key, not an SMTP key
+- Confirm the email in `EMAIL_FROM` is a verified Brevo sender
+- Check Render logs for Brevo API response status and error details
 
 ### Frontend cannot reach backend
 - Confirm `VITE_API_URL` is set correctly

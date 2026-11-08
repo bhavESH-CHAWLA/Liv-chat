@@ -7,6 +7,7 @@ export const ENV = {
   NODE_ENV: process.env.NODE_ENV || "development",
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5174",
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
   EMAIL_FROM: process.env.EMAIL_FROM || "no-reply@localhost",
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "LIV-CHAT",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
