@@ -2,6 +2,7 @@ import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import mongoose from "mongoose";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isSameId = (a, b) => a?.toString() === b?.toString();
@@ -128,6 +129,57 @@ export const sendContactRequest = async (req, res) => {
   } catch (error) {
     console.error("Error in sendContactRequest:", error.message);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const connectFromInvite = async (req, res) => {
+  const { id: targetUserId } = req.params;
+  const userId = req.user._id;
+
+  if (!mongoose.isValidObjectId(targetUserId)) {
+    return res.status(400).json({ message: "Invalid invite link." });
+  }
+
+  if (isSameId(userId, targetUserId)) {
+    return res.status(400).json({ message: "This is your own invite link." });
+  }
+
+  try {
+    const [user, targetUser] = await Promise.all([
+      User.findById(userId).select("_id"),
+      User.findById(targetUserId).select("_id"),
+    ]);
+
+    if (!user) return res.status(404).json({ message: "User not found." });
+    if (!targetUser) return res.status(404).json({ message: "Invite owner not found." });
+
+    await Promise.all([
+      User.updateOne(
+        { _id: userId },
+        {
+          $addToSet: { contacts: targetUserId },
+          $pull: {
+            incomingContactRequests: targetUserId,
+            outgoingContactRequests: targetUserId,
+          },
+        }
+      ),
+      User.updateOne(
+        { _id: targetUserId },
+        {
+          $addToSet: { contacts: userId },
+          $pull: {
+            incomingContactRequests: userId,
+            outgoingContactRequests: userId,
+          },
+        }
+      ),
+    ]);
+
+    res.status(200).json({ message: "Connected successfully." });
+  } catch (error) {
+    console.error("Error connecting from invite:", error.message);
+    res.status(500).json({ message: "Unable to connect from this invite." });
   }
 };
 

@@ -4,74 +4,50 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import BorderAnimatedContainer from "../components/BorderAnimatedContainer";
 import toast from "react-hot-toast";
-import { UserCheck, UserPlus, XCircle, ArrowLeft, Loader2, Copy, Check, ShieldCheck } from "lucide-react";
+import { UserPlus, ArrowLeft, Loader2, Copy, Check, ShieldCheck } from "lucide-react";
 
 function InvitePage() {
   const { id } = useParams();
   const { authUser } = useAuthStore();
-  const { getInviteProfile, sendContactRequest, acceptContactRequest, declineContactRequest } = useChatStore();
+  const { getInviteProfile, connectFromInvite, setSelectedUser } = useChatStore();
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
 
   useEffect(() => {
+    let isActive = true;
+
     const loadProfile = async () => {
       setIsLoading(true);
       try {
         const data = await getInviteProfile(id);
-        setProfile(data);
+        if (!isActive) return;
+
+        if (data.isSelf || data.isContact) {
+          setProfile(data);
+          return;
+        }
+
+        await connectFromInvite(id);
+        const connectedProfile = await getInviteProfile(id);
+        if (isActive) {
+          setProfile(connectedProfile);
+          toast.success("You’re connected! You can now chat.");
+        }
       } catch (error) {
-        toast.error(error?.response?.data?.message || "Unable to load invite details.");
+        if (isActive) {
+          toast.error(error?.response?.data?.message || "Unable to connect from this invite.");
+        }
       } finally {
-        setIsLoading(false);
+        if (isActive) setIsLoading(false);
       }
     };
 
-    if (id) loadProfile();
-  }, [getInviteProfile, id]);
-
-  const handleSendRequest = async () => {
-    setActionLoading(true);
-    try {
-      await sendContactRequest(id);
-      toast.success("Contact request sent successfully!");
-      const data = await getInviteProfile(id);
-      setProfile(data);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to send contact request.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleAcceptRequest = async () => {
-    setActionLoading(true);
-    try {
-      await acceptContactRequest(id);
-      toast.success("Contact request accepted! You can now chat.");
-      const data = await getInviteProfile(id);
-      setProfile(data);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to accept request.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDeclineRequest = async () => {
-    setActionLoading(true);
-    try {
-      await declineContactRequest(id);
-      toast.success("Contact request declined.");
-      const data = await getInviteProfile(id);
-      setProfile(data);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to decline request.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+    if (id && authUser) loadProfile();
+    return () => {
+      isActive = false;
+    };
+  }, [authUser, connectFromInvite, getInviteProfile, id]);
 
   const handleCopyInviteUrl = async () => {
     try {
@@ -84,6 +60,10 @@ function InvitePage() {
     }
   };
 
+  const handleOpenChat = () => {
+    setSelectedUser(profile);
+  };
+
   if (!authUser) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-slate-950 text-slate-100">
@@ -93,10 +73,10 @@ function InvitePage() {
           </div>
           <h1 className="text-xl font-bold mb-2 text-slate-100">Sign In to Connect</h1>
           <p className="text-slate-400 text-xs sm:text-sm mb-6 leading-relaxed">
-            You need to be signed in to your Liv-chat account to accept invitations or start chatting with this member.
+            Sign in to your Liv-chat account to connect with this member.
           </p>
           <Link
-            to="/login"
+            to={`/login?redirect=${encodeURIComponent(`/invite/${id}`)}`}
             className="w-full inline-flex items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition shadow-md shadow-cyan-500/20 focus-visible:ring-2 focus-visible:ring-cyan-300"
           >
             Go to Login
@@ -165,14 +145,10 @@ function InvitePage() {
                     <h2 className="text-sm font-bold text-slate-200">Connection Status</h2>
                     <p className="text-slate-400 text-xs mt-1 leading-relaxed">
                       {profile.isSelf
-                        ? "This is your personal invite link. You can copy and send this URL to invite other users to connect."
+                        ? "This is your personal invite link. Anyone who opens it while signed in will be added to your contacts automatically."
                         : profile.isContact
                         ? "You are connected! You can open the chat anytime from your conversation list."
-                        : profile.requestStatus === "outgoing"
-                        ? "You have already sent a request to this user. Waiting for approval."
-                        : profile.requestStatus === "incoming"
-                        ? "This user has sent you a connection request. Accept below to start chatting."
-                        : "Connect with this user to start instant real-time messaging."}
+                        : "Opening this invitation will connect you automatically."}
                     </p>
                   </div>
 
@@ -196,48 +172,19 @@ function InvitePage() {
                           </>
                         )}
                       </button>
-                    ) : profile.requestStatus === "incoming" ? (
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handleAcceptRequest}
-                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition shadow-md shadow-cyan-500/20 active:scale-[0.99] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-cyan-300"
-                        >
-                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                          <span>Accept Request</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handleDeclineRequest}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-5 py-3 text-sm font-bold text-slate-300 transition active:scale-[0.99] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-cyan-400"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          <span>Decline</span>
-                        </button>
-                      </div>
-                    ) : profile.requestStatus === "outgoing" ? (
-                      <div className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-300">
-                        <span>⏳ Request pending member response</span>
-                      </div>
                     ) : profile.isContact ? (
                       <Link
                         to="/"
+                        onClick={handleOpenChat}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 transition shadow-md shadow-cyan-500/20 focus-visible:ring-2 focus-visible:ring-cyan-300"
                       >
                         <span>Open Direct Chat</span>
                       </Link>
                     ) : (
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handleSendRequest}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-6 py-3 text-sm font-bold text-slate-950 transition shadow-md shadow-cyan-500/20 active:scale-[0.99] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-cyan-300"
-                      >
-                        {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                        <span>Send Contact Request</span>
-                      </button>
+                      <div className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-xs font-semibold text-cyan-300">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Connecting…</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -251,4 +198,3 @@ function InvitePage() {
 }
 
 export default InvitePage;
-

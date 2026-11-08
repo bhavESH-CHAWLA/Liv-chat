@@ -62,16 +62,14 @@ The UX is optimized for responsiveness and includes a clean dashboard with chat 
 - Message search and active conversation switching
 
 ### Contact System
-- Send contact requests
-- Accept or decline requests
-- Maintain accepted contacts list
-- View incoming and outgoing requests
-- Restrict chats to accepted contacts only
+- Connect automatically when opening another member's invite link
+- Maintain a mutual contacts list
+- Restrict chats to contacts
 - Chat list sorted around recent interactions
 
 ### Invite / Sharing Experience
 - QR code card to share a profile invite
-- Invite-based flow for users to connect to others
+- Scanning or opening an invite connects signed-in users automatically
 - Public profile route for invite links
 
 ### Security & Abuse Protection
@@ -328,11 +326,10 @@ The auth and message routes are wrapped with middleware to enforce rules before 
 4. Log in
 
 ### Contact flow
-1. Open the contact list
-2. Search for a user
-3. Send a contact request
-4. Wait for the other user to accept
-5. Start messaging once connected
+1. Share your invite QR code or link
+2. The other member signs in and opens the invite
+3. Both members are added to each other's contacts automatically
+4. Open the conversation and start messaging
 
 ### Real-time chat
 1. Open a contact from the chat list

@@ -6,6 +6,7 @@ import {
   sendMessage,
   getContactRequests,
   sendContactRequest,
+  connectFromInvite,
   acceptContactRequest,
   declineContactRequest,
   getUserPublicProfile,
@@ -23,6 +24,7 @@ router.get("/contacts", getAllContacts);
 router.get("/chats", getChatPartners);
 router.get("/requests", getContactRequests);
 router.get("/profile/:id", getUserPublicProfile);
+router.post("/invite/:id/connect", connectFromInvite);
 router.get("/:id", getMessagesByUserId);
 router.post("/send/:id", sendMessage);
 router.post("/request/:id", sendContactRequest);

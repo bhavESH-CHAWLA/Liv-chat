@@ -91,8 +91,10 @@ export const useChatStore = create((set, get) => ({
     return res.data;
   },
 
-  sendContactRequest: async (userId) => {
-    await axiosInstance.post(`/messages/request/${userId}`);
+  connectFromInvite: async (userId) => {
+    const res = await axiosInstance.post(`/messages/invite/${userId}/connect`);
+    await Promise.all([get().getMyChatPartners(), get().getAllContacts()]);
+    return res.data;
   },
 
   acceptContactRequest: async (userId) => {

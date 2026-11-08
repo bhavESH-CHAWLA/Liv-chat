@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 import ChatPage from "./pages/ChatPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -11,6 +11,12 @@ import { Toaster } from "react-hot-toast";
 
 function App() {
   const { checkAuth, isCheckingAuth, authUser } = useAuthStore();
+  const location = useLocation();
+  const requestedRedirect = new URLSearchParams(location.search).get("redirect");
+  const loginRedirect =
+    requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+      ? requestedRedirect
+      : "/";
 
   useEffect(() => {
     checkAuth();
@@ -27,10 +33,10 @@ function App() {
       <div className="relative w-full h-[100dvh] md:h-auto flex items-center justify-center">
         <Routes>
           <Route path="/" element={authUser ? <ChatPage /> : <Navigate to="/login" replace />} />
-          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" replace />} />
+          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to={loginRedirect} replace />} />
           <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" replace />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/invite/:id" element={authUser ? <InvitePage /> : <Navigate to="/login" replace />} />
+          <Route path="/invite/:id" element={<InvitePage />} />
         </Routes>
       </div>
 
