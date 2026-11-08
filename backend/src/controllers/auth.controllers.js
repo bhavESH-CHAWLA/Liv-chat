@@ -201,6 +201,9 @@ export const resendVerificationEmail = async (req, res) => {
     }
   } catch (error) {
     console.error("Error resending verification email:", error.message);
+    return res.status(503).json({
+      message: "Could not send the verification email. Please check the mail service configuration and try again.",
+    });
   }
 
   res.status(202).json({
