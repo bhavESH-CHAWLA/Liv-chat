@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { arcjetProtection } from "../src/middleware/arcjet.middleware.js";
-import { sendWelcomeEmail } from "../src/emails/emailHandlers.js";
+import { createEmailSender, EmailDeliveryError } from "../src/emails/emailHandlers.js";
 
 test("arcjet middleware falls back to next when no Arcjet configuration is available", async () => {
   const req = {
@@ -31,10 +31,46 @@ test("arcjet middleware falls back to next when no Arcjet configuration is avail
   assert.equal(res.statusCode, 200);
 });
 
-test("welcome email sending uses a fallback result when no email provider is configured", async () => {
-  const result = await sendWelcomeEmail("user@example.com", "Test User", "http://localhost:5173");
+test("email sender reports missing SMTP configuration instead of claiming the message was queued", async () => {
+  const sendEmail = createEmailSender({ mailTransport: null, from: "" });
 
-  assert.equal(result.provider, "fallback");
-  assert.equal(result.status, "queued");
-  assert.match(result.message, /queued|provider/i);
+  await assert.rejects(
+    sendEmail("user@example.com", "Test", "<p>Test</p>"),
+    EmailDeliveryError
+  );
+});
+
+test("email sender reports successful SMTP delivery", async () => {
+  let sentMessage;
+  const sendEmail = createEmailSender({
+    mailTransport: {
+      async sendMail(message) {
+        sentMessage = message;
+        return { messageId: "test-message-id" };
+      },
+    },
+    from: "Liv Chat <no-reply@example.com>",
+  });
+
+  const result = await sendEmail("user@example.com", "Test", "<p>Test</p>");
+
+  assert.equal(result.status, "sent");
+  assert.equal(sentMessage.to, "user@example.com");
+  assert.equal(sentMessage.from, "Liv Chat <no-reply@example.com>");
+});
+
+test("email sender surfaces SMTP delivery failures", async () => {
+  const sendEmail = createEmailSender({
+    mailTransport: {
+      async sendMail() {
+        throw Object.assign(new Error("SMTP unavailable"), { code: "ECONNECTION" });
+      },
+    },
+    from: "no-reply@example.com",
+  });
+
+  await assert.rejects(
+    sendEmail("user@example.com", "Test", "<p>Test</p>"),
+    (error) => error instanceof EmailDeliveryError && error.cause.code === "ECONNECTION"
+  );
 });

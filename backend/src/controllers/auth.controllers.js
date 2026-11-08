@@ -1,4 +1,10 @@
-import { sendWelcomeEmail, sendEmailVerification, sendPasswordResetEmail, sendTwoFactorCodeEmail } from "../emails/emailHandlers.js";
+import {
+  EmailDeliveryError,
+  sendWelcomeEmail,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  sendTwoFactorCodeEmail,
+} from "../emails/emailHandlers.js";
 import { generateToken, createRandomToken, hashToken, createSixDigitCode } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
@@ -65,6 +71,11 @@ export const signup = async (req, res) => {
     }
   } catch (error) {
     console.log("Error in signup controller:", error);
+    if (error instanceof EmailDeliveryError) {
+      return res.status(503).json({
+        message: "Account created, but the verification email could not be sent. Please request another email from the sign-in page.",
+      });
+    }
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -178,18 +189,23 @@ export const logout = (_, res) => {
 };
 
 export const resendVerificationEmail = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.isEmailVerified) return res.status(400).json({ message: "Email already verified" });
-
-    await createAndSendEmailVerification(user);
-
-    res.status(200).json({ message: "Verification email sent" });
-  } catch (error) {
-    console.error("Error resending verification email:", error);
-    res.status(500).json({ message: "Internal server error" });
+  const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
   }
+
+  try {
+    const user = await User.findOne({ email });
+    if (user && !user.isEmailVerified) {
+      await createAndSendEmailVerification(user);
+    }
+  } catch (error) {
+    console.error("Error resending verification email:", error.message);
+  }
+
+  res.status(202).json({
+    message: "If an unverified account exists for that address, a verification email will be sent.",
+  });
 };
 
 export const verifyEmail = async (req, res) => {

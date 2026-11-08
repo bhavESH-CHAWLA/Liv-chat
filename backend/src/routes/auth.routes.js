@@ -31,7 +31,7 @@ router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 
 router.post("/verify-email", verifyEmail);
-router.post("/resend-verification", protectRoute, resendVerificationEmail);
+router.post("/resend-verification", resendVerificationEmail);
 
 router.put("/update-profile", protectRoute, updateProfile);
 router.put("/change-password", protectRoute, changePassword);

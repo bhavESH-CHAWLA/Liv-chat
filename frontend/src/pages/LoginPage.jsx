@@ -7,7 +7,7 @@ import { Link } from "react-router";
 function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoggingIn } = useAuthStore();
+  const { login, isLoggingIn, resendVerificationEmail, isResendingVerification } = useAuthStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -104,6 +104,15 @@ function LoginPage() {
                     )}
                   </button>
                 </form>
+
+                <button
+                  type="button"
+                  onClick={() => resendVerificationEmail(formData.email)}
+                  disabled={isResendingVerification || !formData.email.trim()}
+                  className="mt-4 w-full text-center text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isResendingVerification ? "Requesting email…" : "Resend verification email"}
+                </button>
 
                 <div className="mt-6 text-center text-xs sm:text-sm text-slate-400">
                   <span>Don't have an account? </span>

@@ -15,6 +15,7 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   isSigningUp: false,
   isLoggingIn: false,
+  isResendingVerification: false,
   isUpdatingProfile: false,
   socket: null,
   onlineUsers: [],
@@ -62,6 +63,19 @@ export const useAuthStore = create((set, get) => ({
       console.error("Login error:", error);
     } finally {
       set({ isLoggingIn: false });
+    }
+  },
+
+  resendVerificationEmail: async (email) => {
+    set({ isResendingVerification: true });
+    try {
+      const res = await axiosInstance.post("/auth/resend-verification", { email });
+      toast.success(res.data.message);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to request a verification email");
+      console.error("Resend verification email error:", error);
+    } finally {
+      set({ isResendingVerification: false });
     }
   },
 
